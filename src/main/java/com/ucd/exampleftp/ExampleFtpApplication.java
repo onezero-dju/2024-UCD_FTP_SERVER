@@ -1,18 +1,16 @@
 package com.ucd.exampleftp;
 
-import com.mongodb.client.gridfs.GridFSBuckets;
-import com.mongodb.client.gridfs.GridFSBucket;
+
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
-import com.mongodb.client.model.Filters;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
-import org.apache.ftpserver.ftplet.FtpException;
+import org.apache.ftpserver.ftplet.*;
 import org.apache.ftpserver.listener.ListenerFactory;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.SaltedPasswordEncryptor;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
-import org.apache.ftpserver.ftplet.UserManager;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
+import org.apache.mina.core.write.WriteToClosedSessionException;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -24,11 +22,12 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.SocketTimeoutException;
 import java.util.Collections;
 import java.util.Date;
 
@@ -53,13 +52,18 @@ public class ExampleFtpApplication {
         };
     }
 
+    @Bean
+    public MongoClient mongoClient() {
+        return MongoClients.create(mongoUri); // MongoDB 클라이언트를 Bean으로 설정
+    }
+
     private void startFtpServer(GridFsTemplate gridFsTemplate) throws FtpException {
         FtpServerFactory serverFactory = new FtpServerFactory(); // FTP 서버 팩토리 생성
         ListenerFactory factory = new ListenerFactory(); // 리스너 팩토리 생성
         factory.setPort(ftpPort); // 포트 설정
 
         // 타임아웃 설정 추가
-        factory.setIdleTimeout(300); // 초 단위 설정 (여기서는 60초)
+        factory.setIdleTimeout(300); // 초 단위 설정 (여기서는 300초)
 
         serverFactory.addListener("default", factory.createListener()); // 리스너 추가
 
@@ -76,6 +80,7 @@ public class ExampleFtpApplication {
         um.save(user); // 사용자 저장
 
         serverFactory.setUserManager(um); // 사용자 관리자 설정
+
         FtpServer server = serverFactory.createServer(); // FTP 서버 생성
         server.start(); // FTP 서버 시작
 
@@ -111,24 +116,38 @@ public class ExampleFtpApplication {
     }
 
     private void saveFileToGridFS(File file, GridFsTemplate gridFsTemplate) throws IOException {
-        MongoClient mongoClient = MongoClients.create(mongoUri); // MongoDB 클라이언트 생성
-        MongoDatabase database = mongoClient.getDatabase("your_database_name"); // 데이터베이스 선택
-        GridFSBucket gridFSBucket = GridFSBuckets.create(database); // GridFS 버킷 생성
-
         try (FileInputStream inputStream = new FileInputStream(file)) {
             GridFSUploadOptions options = new GridFSUploadOptions()
                     .metadata(new Document("type", "audio").append("upload_date", new Date())); // 업로드 옵션 설정
 
-            gridFSBucket.uploadFromStream(file.getName(), inputStream, options); // GridFS에 파일 업로드
-
-            Document doc = new Document("filename", file.getName())
-                    .append("uploadDate", new Date())
-                    .append("path", file.getAbsolutePath());
-            database.getCollection("files").insertOne(doc); // 파일 메타데이터를 MongoDB에 저장
+            gridFsTemplate.store(inputStream, file.getName(), options.getMetadata()); // GridFS에 파일 업로드
 
             System.out.println("File saved to GridFS and metadata saved to MongoDB: " + file.getName());
-        } finally {
-            mongoClient.close(); // MongoDB 클라이언트 닫기
+        }
+    }
+
+    // CustomFtpHandler 클래스 추가
+    public class CustomFtpHandler {
+
+        public void handleUpload(FtpSession session, FtpRequest request) {
+            try {
+                FtpFile file = session.getFileSystemView().getFile(request.getArgument());
+                try (OutputStream os = file.createOutputStream(0)) {
+                    // 파일 업로드 로직
+                } catch (SocketTimeoutException e) {
+                    // 타임아웃 예외 처리
+                    System.out.println("Socket timeout occurred during file upload.");
+                    // 재시도 로직 추가
+                } catch (WriteToClosedSessionException e) {
+                    // 세션이 닫힌 경우 예외 처리
+                    System.out.println("Attempted to write to a closed session.");
+                } catch (IOException e) {
+                    // 기타 IO 예외 처리
+                    System.out.println("IO exception occurred during file upload.");
+                }
+            } catch (FtpException e) {
+                System.out.println("FTP exception occurred while retrieving file: " + e.getMessage());
+            }
         }
     }
 }

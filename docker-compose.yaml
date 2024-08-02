@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mongo-ftp-compose:
+    image: mongo:latest
+    container_name: mongo-ftp-compose
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data:/data/db
+    networks:
+      - simple_network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  springboot-ftp-compose:
+    image: gihong0409/ftpserver:latest
+    container_name: springboot-ftp-compose
+    ports:
+      - "8080:8080"
+      - "2121:2121"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongo-ftp-compose:27017/your_database_name?authSource=admin
+      FTP_SERVER_PORT: 2121
+    depends_on:
+      - mongo-ftp-compose
+    restart: on-failure
+    networks:
+      - simple_network
+
+networks:
+  simple_network:
+    driver: bridge
