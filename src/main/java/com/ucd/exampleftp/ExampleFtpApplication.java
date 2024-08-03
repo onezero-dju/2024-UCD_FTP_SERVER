@@ -1,11 +1,14 @@
 package com.ucd.exampleftp;
 
-
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.*;
 import org.apache.ftpserver.listener.ListenerFactory;
+import org.apache.ftpserver.listener.nio.NioListener;
+import org.apache.ftpserver.ssl.SslConfiguration;
 import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.SaltedPasswordEncryptor;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
@@ -17,6 +20,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
@@ -33,6 +37,7 @@ import java.util.Date;
 
 @SpringBootApplication // Spring Boot 애플리케이션임을 나타냄
 @EnableMongoRepositories // MongoDB 리포지토리 활성화
+@Slf4j
 public class ExampleFtpApplication {
 
     @Value("${spring.data.mongodb.uri}")
@@ -46,9 +51,16 @@ public class ExampleFtpApplication {
     }
 
     @Bean
-    public CommandLineRunner run(GridFsTemplate gridFsTemplate) {
+    public CommandLineRunner run(GridFsTemplate gridFsTemplate, MongoTemplate mongoTemplate) {
         return args -> {
-            startFtpServer(gridFsTemplate); // 애플리케이션 시작 시 FTP 서버를 시작
+            // FTP 서버 시작
+            startFtpServer(gridFsTemplate);
+
+            // 테스트 데이터 삽입
+            Document testDocument = new Document();
+            testDocument.append("message", "test done");
+            mongoTemplate.getDb().getCollection("test_collection").insertOne(testDocument);
+            System.out.println("Inserted test document into MongoDB: " + testDocument);
         };
     }
 
@@ -62,8 +74,10 @@ public class ExampleFtpApplication {
         ListenerFactory factory = new ListenerFactory(); // 리스너 팩토리 생성
         factory.setPort(ftpPort); // 포트 설정
 
-        // 타임아웃 설정 추가
-        factory.setIdleTimeout(300); // 초 단위 설정 (여기서는 300초)
+        // 패시브 모드 설정
+        DataConnectionConfigurationFactory dataConnConfigFactory = new DataConnectionConfigurationFactory();
+        dataConnConfigFactory.setPassivePorts("21100-21110");
+        factory.setDataConnectionConfiguration(dataConnConfigFactory.createDataConnectionConfiguration());
 
         serverFactory.addListener("default", factory.createListener()); // 리스너 추가
 
@@ -89,7 +103,9 @@ public class ExampleFtpApplication {
 
     private void monitorFtpDirectory(GridFsTemplate gridFsTemplate) {
         File ftpDir = new File("ftp"); // FTP 디렉토리 객체 생성
+
         if (!ftpDir.exists()) {
+            log.info("There is no ftp directory ***********************************");
             ftpDir.mkdirs(); // 디렉토리가 없으면 생성
         }
 
@@ -100,7 +116,7 @@ public class ExampleFtpApplication {
                     if (file.isFile()) {
                         try {
                             saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
-                            file.delete();  // 파일을 MongoDB에 저장 후 삭제
+                            // file.delete();  // 파일을 MongoDB에 저장 후 삭제
                         } catch (IOException e) {
                             e.printStackTrace(); // 예외 발생 시 스택 트레이스 출력
                         }
