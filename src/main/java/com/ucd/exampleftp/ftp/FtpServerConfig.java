@@ -1,8 +1,8 @@
 package com.ucd.exampleftp.ftp;
 
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
-import com.ucd.exampleftp.MongoService.MongoService;
-import com.ucd.exampleftp.returnzero.PostAndGetTranscribe;
+import com.ucd.exampleftp.ftp.MongoService.MongoService;
+import com.ucd.exampleftp.ftp.returnzero.PostAndGetTranscribe;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
@@ -14,12 +14,8 @@ import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.apache.ftpserver.usermanager.SaltedPasswordEncryptor;
 import org.apache.ftpserver.usermanager.impl.BaseUser;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
-import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -66,36 +62,42 @@ public class FtpServerConfig {
         BaseUser user = new BaseUser();
         user.setName("ftpuser"); // 사용자 이름 설정
         user.setPassword("Str0ngP@ssw0rd!"); // 사용자 비밀번호 설정
-        log.info("user password:"+user.getPassword());
         user.setHomeDirectory("ftp"); // 홈 디렉토리 설정
-        user.setAuthorities(Collections.singletonList(new WritePermission())); // 쓰기 권한 부여
 
-        userManagerFactory.createUserManager().save(user); // 사용자 저장
-        serverFactory.setUserManager(userManagerFactory.createUserManager()); // 사용자 관리자 설정
+        user.setAuthorities(Collections.singletonList(new WritePermission())); // 쓰기 권한 부여
+        um.save(user); // 사용자 저장
+
+        serverFactory.setUserManager(um); // 사용자 관리자 설정
 
         FtpServer server = serverFactory.createServer(); // FTP 서버 생성
         server.start(); // FTP 서버 시작
 
         new Thread(() -> monitorFtpDirectory(gridFsTemplate)).start(); // FTP 디렉토리 모니터링을 새로운 스레드로 시작
+
     }
 
     private void monitorFtpDirectory(GridFsTemplate gridFsTemplate) {
         File ftpDir = new File("ftp"); // FTP 디렉토리 객체 생성
 
         if (!ftpDir.exists()) {
-            log.error("There is no ftp directory ***********************************");
+            log.info("There is no ftp directory. Ftp file will be crated automatically");
             ftpDir.mkdirs(); // 디렉토리가 없으면 생성
         }
 
         while (true) {
-            String token = mongoService.getTokenFromDB("returnzero_token");
+            String token = mongoService.getRZtoken("returnzero_token");
+
+
+
             File[] files = ftpDir.listFiles(); // FTP 디렉토리 내 파일 목록 가져오기
             if (files != null) {
                 for (File file : files) {
                     if (file.isFile()) {
                         try {
                             saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
-                            postAndGetTranscribe.postAndGetTranscribe(file,token);
+                            String response_stt="";
+                            response_stt=postAndGetTranscribe.postAndGetTranscribe(file,token);
+                            log.info("response is here:"+response_stt);
                             file.delete();  // 파일을 MongoDB에 저장 후 삭제
                         } catch (IOException e) {
                             e.printStackTrace(); // 예외 발생 시 스택 트레이스 출력
