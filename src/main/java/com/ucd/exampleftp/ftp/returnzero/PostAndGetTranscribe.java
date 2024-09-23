@@ -2,6 +2,7 @@ package com.ucd.exampleftp.ftp.returnzero;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ucd.exampleftp.STT.service.STTResponseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,10 @@ public class PostAndGetTranscribe {
 
     @Autowired
     private PostTranscribeSample postTranscribeSample;
+
+    @Autowired
+    private STTResponseService sttResponseService;
+
 
     public String postAndGetTranscribe(
             File file, String token
@@ -73,6 +78,7 @@ public class PostAndGetTranscribe {
             throw new RuntimeException(e);
         }
 
+        sttResponseService.saveSTTResponse(response);
 
         return response;
 

@@ -95,9 +95,8 @@ public class FtpServerConfig {
                     if (file.isFile()) {
                         try {
                             saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
-                            String response_stt="";
-                            response_stt=postAndGetTranscribe.postAndGetTranscribe(file,token);
-                            log.info("response is here:"+response_stt);
+                            String response_stt=postAndGetTranscribe.postAndGetTranscribe(file,token);
+                            log.info("\n\n"+"response is here:"+response_stt+"\n\n");
                             file.delete();  // 파일을 MongoDB에 저장 후 삭제
                         } catch (IOException e) {
                             e.printStackTrace(); // 예외 발생 시 스택 트레이스 출력
@@ -114,6 +113,10 @@ public class FtpServerConfig {
     }
 
     private void saveFileToGridFS(File file, GridFsTemplate gridFsTemplate) throws IOException {
+
+        log.info(file.getName());
+
+
         try (FileInputStream inputStream = new FileInputStream(file)) {
             GridFSUploadOptions options = new GridFSUploadOptions()
                     .metadata(new org.bson.Document("type", "audio").append("upload_date", new Date())); // 업로드 옵션 설정
