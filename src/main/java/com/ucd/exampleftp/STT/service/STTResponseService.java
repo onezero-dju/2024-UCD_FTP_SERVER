@@ -18,10 +18,13 @@ public class STTResponseService {
     @Autowired
     private ObjectMapper objectMapper;
     @Transactional
-    public STTResponse saveSTTResponse(String jsonResponse) {
+    public STTResponse saveSTTResponse(String jsonResponse, String meetingId) {
         try {
+
+
             // JSON 문자열을 STTResponse 객체로 매핑
             STTResponse sttResponse = objectMapper.readValue(jsonResponse, STTResponse.class);
+            sttResponse.setMeetingId(meetingId);
             // MongoDB에 저장
             return sttResponseRepository.save(sttResponse);
         } catch (Exception e) {
@@ -29,6 +32,7 @@ public class STTResponseService {
             throw new RuntimeException("Failed to map and save STTResponse", e);
         }
     }
+
 
 }
 

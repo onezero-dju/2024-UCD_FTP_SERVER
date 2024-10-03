@@ -78,7 +78,7 @@ public class PostAndGetTranscribe {
             throw new RuntimeException(e);
         }
 
-        sttResponseService.saveSTTResponse(response);
+        sttResponseService.saveSTTResponse(response, "meetingId");
 
         return response;
 

@@ -3,12 +3,13 @@ package com.ucd.exampleftp.meeting.service;
 
 import com.ucd.exampleftp.meeting.db.Meeting;
 import com.ucd.exampleftp.meeting.db.MeetingRepository;
-import com.ucd.exampleftp.meeting.model.MeetingConverter;
+import com.ucd.exampleftp.meeting.model.MeetingCreateRequest;
 import com.ucd.exampleftp.meeting.model.MeetingDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,10 +27,24 @@ public class MeetingService {
 
 
     // 미팅 저장
-    public String saveMeeting(Meeting meeting) {
+    public MeetingDTO saveMeeting(MeetingCreateRequest meetingCreateRequest) {
+
+        Meeting meeting = Meeting.builder()
+                .meetingTitle(meetingCreateRequest.getMeetingTitle())
+                .categoryName(meetingCreateRequest.getCategoryName())
+                .categoryId(meetingCreateRequest.getCategoryId())
+                .channelName(meetingCreateRequest.getChannelName())
+                .channelId(meetingCreateRequest.getChannelId())
+                .recordings(meetingCreateRequest.getRecordings())
+                .agenda(meetingCreateRequest.getAgenda())
+                .participants(meetingCreateRequest.getParticipants())
+                .createdAt(LocalDate.now())
+                .editedAt(LocalDate.now())
+                .build();
+
         meetingRepository.save(meeting);  // MongoDB에 저장
 
-        return "meeting_id:" + meeting.getId().toString();
+        return meetingConverter.meetingConverterToDTO(meeting);
     }
 
 
@@ -69,7 +84,8 @@ public class MeetingService {
         } else {
             return true;
         }
-
-
     }
+
+
+
 }

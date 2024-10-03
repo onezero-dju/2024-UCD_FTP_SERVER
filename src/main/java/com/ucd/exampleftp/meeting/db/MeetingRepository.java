@@ -11,6 +11,8 @@ public interface MeetingRepository extends MongoRepository<Meeting,ObjectId> {
 
     List<Meeting> findAllByCategoryIdOrderByEditedAt(String id);
 
+
+
     // agenda가 null이 아니고 비어 있지 않은 경우 존재 여부 확인
 
 }

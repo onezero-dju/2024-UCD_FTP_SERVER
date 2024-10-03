@@ -21,13 +21,22 @@ import java.util.List;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)  // JSON 필드와 일치시키기 위해 추가
 public class MeetingCreateRequest {
 
+    @Field("channel_id")
+    private Long channelId;
+
+    @Field("channel_name")
+    private String channelName;
+
     @Field("category_id")
-    private String categoryId;
+    private Long categoryId;
+
+    @Field("category_id")
+    private String categoryName;
+
 
     @Field(value = "meeting_title")
     private String meetingTitle;
 
-    @Field(value = "participants")
     private List<Participant> participants;
 
     private List<String> agenda;

@@ -1,6 +1,7 @@
-package com.ucd.exampleftp.meeting.model;
+package com.ucd.exampleftp.meeting.service;
 
 import com.ucd.exampleftp.meeting.db.Meeting;
+import com.ucd.exampleftp.meeting.model.MeetingDTO;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +17,10 @@ public class MeetingConverter {
         MeetingDTO meetingDTO = MeetingDTO.builder()
                 .id(meeting.getId().toString())
                 .meetingTitle(meeting.getMeetingTitle())
+                .channelId(meeting.getChannelId())
+                .channelName(meeting.getChannelName())
                 .categoryId(meeting.getCategoryId())
+                .categoryName(meeting.getCategoryName())
                 .createdAt(meeting.getCreatedAt())
                 .editedAt(meeting.getEditedAt())
                 .agenda(meeting.getAgenda())
