@@ -26,7 +26,7 @@ public class PostAndGetTranscribe {
 
 
     public String postAndGetTranscribe(
-            File file, String token
+            File file, String token, String meetingId, String participants, String count
     ){
 
         String transcribeIdResponse;
@@ -78,7 +78,7 @@ public class PostAndGetTranscribe {
             throw new RuntimeException(e);
         }
 
-        sttResponseService.saveSTTResponse(response, "meetingId");
+        sttResponseService.saveSTTResponse(response, meetingId, Integer.parseInt(count));
 
         return response;
 

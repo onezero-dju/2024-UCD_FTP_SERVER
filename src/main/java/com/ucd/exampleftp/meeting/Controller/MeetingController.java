@@ -1,20 +1,24 @@
 package com.ucd.exampleftp.meeting.Controller;
 
+import com.ucd.exampleftp.meeting.model.AddAgendaRequest;
 import com.ucd.exampleftp.meeting.model.MeetingCreateRequest;
 import com.ucd.exampleftp.meeting.model.MeetingDTO;
-import com.ucd.exampleftp.meeting.model.Test;
+import com.ucd.exampleftp.meeting.model.MeetingsByChannelDTOList;
 import com.ucd.exampleftp.meeting.service.MeetingService;
+import com.ucd.exampleftp.util.exception.GlobalExceptionHandler;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping(value = "/api/meeting")
-public class MeetingController {
+@RequestMapping(value = "/api/meetings")
+public class MeetingController extends GlobalExceptionHandler {
 
 
     private final MeetingService meetingService;
@@ -25,6 +29,7 @@ public class MeetingController {
 
     @PostMapping(value = "create")
     public ResponseEntity<MeetingDTO> createMeeting(
+            @Valid
             @RequestBody MeetingCreateRequest meetingCreateRequest
     ) {
         // 미팅을 저장하고 생성된 미팅 ID를 반환
@@ -51,7 +56,7 @@ public class MeetingController {
 
     }
 
-    @GetMapping(value = "/check_agenda/{meeting_id}")
+    @GetMapping(value = "/{meeting_id}/check_agenda")
     public boolean checkAgenda(
             @PathVariable("meeting_id")
             String meeting_id
@@ -63,15 +68,35 @@ public class MeetingController {
 
     }
 
-    @PostMapping("/test")
-    public String test(
+    @PostMapping(value = "/{meeting_id}/addAgenda")
+    public boolean addAgenda(
+            @PathVariable("meeting_id")
+            String meeting_id,
+
             @RequestBody
-            Test test_context
+            AddAgendaRequest addAgendaRequest
     ){
 
-        return test_context.toString();
+
+
+        return meetingService.addAgenda(meeting_id,addAgendaRequest);
 
     }
+
+
+
+    @GetMapping("/byChannel/{channel_id}")
+    public List<MeetingsByChannelDTOList> getMeetingsByChannelId(
+            @PathVariable(value = "channel_id")
+            String channel_id
+
+    ){
+        return meetingService.viewByChannelId(channel_id);
+
+    }
+
+
+
 
 
 

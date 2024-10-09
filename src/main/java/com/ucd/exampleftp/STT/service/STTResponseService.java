@@ -18,13 +18,14 @@ public class STTResponseService {
     @Autowired
     private ObjectMapper objectMapper;
     @Transactional
-    public STTResponse saveSTTResponse(String jsonResponse, String meetingId) {
+    public STTResponse saveSTTResponse(String jsonResponse, String meetingId, int count) {
         try {
 
 
             // JSON 문자열을 STTResponse 객체로 매핑
             STTResponse sttResponse = objectMapper.readValue(jsonResponse, STTResponse.class);
             sttResponse.setMeetingId(meetingId);
+            sttResponse.setCount(count);
             // MongoDB에 저장
             return sttResponseRepository.save(sttResponse);
         } catch (Exception e) {

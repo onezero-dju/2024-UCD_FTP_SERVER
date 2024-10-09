@@ -22,8 +22,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Date;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -94,9 +93,12 @@ public class FtpServerConfig {
                 for (File file : files) {
                     if (file.isFile()) {
                         try {
-                            saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
-                            String response_stt=postAndGetTranscribe.postAndGetTranscribe(file,token);
+                            List<String> fileInfo= saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
+                            String response_stt=postAndGetTranscribe
+                                    .postAndGetTranscribe(file,token,fileInfo.get(0),fileInfo.get(1),fileInfo.get(2));
+
                             log.info("\n\n"+"response is here:"+response_stt+"\n\n");
+
                             file.delete();  // 파일을 MongoDB에 저장 후 삭제
                         } catch (IOException e) {
                             e.printStackTrace(); // 예외 발생 시 스택 트레이스 출력
@@ -112,19 +114,37 @@ public class FtpServerConfig {
         }
     }
 
-    private void saveFileToGridFS(File file, GridFsTemplate gridFsTemplate) throws IOException {
+    private List<String> saveFileToGridFS(File file, GridFsTemplate gridFsTemplate) throws IOException {
 
         log.info(file.getName());
+
+        List<String> fileInfos = new ArrayList<>(List.of(file.getName().split("%")));
+
+
+
+        for(String str:fileInfos){
+            ///첫번째 meeting_id
+            ///두번째 참여자 수
+            ///세번째 파일 카운트
+            log.info("str"+str);
+        }
+
+        fileInfos.set(2, fileInfos.get(2).split(".wav")[0]);
+
+
+
 
 
         try (FileInputStream inputStream = new FileInputStream(file)) {
             GridFSUploadOptions options = new GridFSUploadOptions()
                     .metadata(new org.bson.Document("type", "audio").append("upload_date", new Date())); // 업로드 옵션 설정
 
-            gridFsTemplate.store(inputStream, file.getName(), options.getMetadata()); // GridFS에 파일 업로드
+            gridFsTemplate.store(inputStream, fileInfos.get(0), options.getMetadata()); // GridFS에 파일 업로드
 
             System.out.println("File saved to GridFS and metadata saved to MongoDB: " + file.getName());
         }
+
+        return fileInfos;
     }
 
 
