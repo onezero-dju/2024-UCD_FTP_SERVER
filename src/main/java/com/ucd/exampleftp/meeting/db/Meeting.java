@@ -50,15 +50,21 @@
         @Field(value = "edited_at")
         private LocalDateTime editedAt;
 
+        @Field(value = "meeting_note_id")
+        private String meetingNoteId;
+
+
         @Builder.Default
         private List<Participant> participants = new ArrayList<>();  // 빈 리스트로 기본값 설정
 
-        @Builder.Default
-        private List<String> agenda = new ArrayList<>();  // 빈 리스트로 기본값 설정
+        @Field(value = "agenda")
+        private String agenda;
 
         @Field("recordings")
         @Builder.Default
         private List<String> recordings = new ArrayList<>();  // 빈 리스트로 기본값 설정
+
+
 
         // 기본 생성자 필요 없음 (Lombok이 자동 생성)
     }

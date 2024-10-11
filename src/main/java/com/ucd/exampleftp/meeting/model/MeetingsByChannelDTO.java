@@ -30,10 +30,10 @@ public class MeetingsByChannelDTO {
 
     @Field(value = "edited_at")
     private LocalDateTime editedAt;
+    private String agenda;
 
     private List<Participant> participants;
 
-    private List<String> agenda;
 
     private List<String> recordings;
 

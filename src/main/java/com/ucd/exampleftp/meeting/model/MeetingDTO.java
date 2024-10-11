@@ -50,7 +50,7 @@ public class MeetingDTO {
 
     private List<Participant> participants;
 
-    private List<String> agenda;
+    private String agenda;
 
     @Field("recordings")
     private List<String> recordings;

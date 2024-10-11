@@ -6,8 +6,11 @@ import com.ucd.exampleftp.STT.db.STTResponse;
 import com.ucd.exampleftp.STT.db.STTResponseRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @Slf4j
@@ -17,6 +20,13 @@ public class STTResponseService {
     private STTResponseRepository sttResponseRepository;
     @Autowired
     private ObjectMapper objectMapper;
+
+    final private MongoTemplate mongoTemplate;
+
+    public STTResponseService(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
     @Transactional
     public STTResponse saveSTTResponse(String jsonResponse, String meetingId, int count) {
         try {
@@ -33,6 +43,15 @@ public class STTResponseService {
             throw new RuntimeException("Failed to map and save STTResponse", e);
         }
     }
+
+    public List<STTResponse> getSTTResponse(
+            String meeting_id
+    ){
+        return sttResponseRepository.findAllByMeetingIdOrderByCountDesc(meeting_id);
+
+
+    }
+
 
 
 }

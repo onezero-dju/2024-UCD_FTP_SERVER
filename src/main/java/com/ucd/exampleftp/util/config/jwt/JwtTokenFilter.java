@@ -1,5 +1,7 @@
 package com.ucd.exampleftp.util.config.jwt;
 
+import com.ucd.exampleftp.util.exception.JwtAuthenticationEntryPoint;
+import com.ucd.exampleftp.util.exception.JwtAuthenticationException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,55 +9,65 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * JWT 토큰을 검증하고, 인증 정보를 SecurityContext에 설정하는 필터
+ */
 @Component
 @Slf4j
 public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Autowired
-    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String token = resolveToken(request);
+        try {
+            String token = resolveToken(request);
 
-        if (token != null) {
-            log.info("Received JWT Token: {}", token); // 토큰을 즉시 로그에 기록
+            if (token != null) {
+                log.info("Received JWT Token: {}", token);
 
-            if (jwtTokenProvider.validateToken(token)) {
-                log.info("JWT Token is valid.");
+                if (jwtTokenProvider.validateToken(token)) {
+                    log.info("JWT Token is valid.");
 
-                String username = jwtTokenProvider.getUsername(token);
-                String role = jwtTokenProvider.getRole(token); // 역할 추출
+                    // CustomUserDetails 객체 생성
+                    CustomUserDetails userDetails = jwtTokenProvider.getUserDetails(token);
 
-                // 역할을 Spring Security의 GrantedAuthority로 변환
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+                    // 인증 객체 생성
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                // 인증 객체 생성
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-                // 인증 객체를 SecurityContext에 설정
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
+                    // 인증 객체를 SecurityContext에 설정
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    log.warn("Invalid JWT Token.");
+                    throw new JwtAuthenticationException("Invalid JWT Token.");
+                }
             } else {
-                log.warn("Invalid JWT Token.");
+                log.info("No JWT Token found in the request.");
+                throw new JwtAuthenticationException("No JWT Token found in the request.");
             }
-        } else {
-            log.info("No JWT Token found in the request.");
+        } catch (JwtAuthenticationException ex) {
+            log.error("JWT Authentication error: {}", ex.getMessage());
+            jwtAuthenticationEntryPoint.commence(request, response, ex);
+            return;
+        } catch (Exception ex) {
+            log.error("Exception in JwtTokenFilter: {}", ex.getMessage());
+            jwtAuthenticationEntryPoint.commence(request, response, new JwtAuthenticationException("Could not set user authentication in security context", ex));
+            return;
         }
 
         filterChain.doFilter(request, response);

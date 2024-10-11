@@ -1,9 +1,6 @@
 package com.ucd.exampleftp.meeting.Controller;
 
-import com.ucd.exampleftp.meeting.model.AddAgendaRequest;
-import com.ucd.exampleftp.meeting.model.MeetingCreateRequest;
-import com.ucd.exampleftp.meeting.model.MeetingDTO;
-import com.ucd.exampleftp.meeting.model.MeetingsByChannelDTOList;
+import com.ucd.exampleftp.meeting.model.*;
 import com.ucd.exampleftp.meeting.service.MeetingService;
 import com.ucd.exampleftp.util.exception.GlobalExceptionHandler;
 import jakarta.validation.Valid;
@@ -33,7 +30,7 @@ public class MeetingController extends GlobalExceptionHandler {
             @RequestBody MeetingCreateRequest meetingCreateRequest
     ) {
         // 미팅을 저장하고 생성된 미팅 ID를 반환
-        MeetingDTO meetingDTO = meetingService.saveMeeting(meetingCreateRequest);
+        MeetingDTO meetingDTO = meetingService.createMeeting(meetingCreateRequest);
 
         // 생성된 리소스의 URI를 생성
         URI location = ServletUriComponentsBuilder
@@ -97,7 +94,7 @@ public class MeetingController extends GlobalExceptionHandler {
 
 
 
-    @GetMapping("/{meeting_id}/delete")
+    @DeleteMapping("/{meeting_id}/delete")
     public boolean deleteMeetings(
             @PathVariable(value = "meeting_id")
             String meeting_id
@@ -116,10 +113,26 @@ public class MeetingController extends GlobalExceptionHandler {
 
 
     @GetMapping(value = "/{meeting_id}/add_participant")
-    public boolean addParticipant(){
+    public boolean addParticipant(
+            @PathVariable(value = "meeting_id")
+            String meeting_id
+    ){
+
+        return meetingService.addParticipant(meeting_id);
 
 
-return false;
+    }
+
+    @PostMapping("/{meeting_id}/edit_agenda")
+    public boolean editAgenda(
+
+            @PathVariable("meeting_id")
+            String meeting_id,
+
+            @RequestBody
+            EditAgendaRequest editAgendaRequest
+    ){
+        return meetingService.editAgenda(meeting_id, editAgendaRequest);
     }
 
 

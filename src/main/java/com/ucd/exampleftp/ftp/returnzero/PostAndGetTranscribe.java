@@ -51,7 +51,7 @@ public class PostAndGetTranscribe {
 
             String transcribeId= idNode.asText();
 
-            log.info("transcribeId:"+transcribeId+"여기서는 id만 잘려서 나와야 함.");
+            log.info("transcribeId:"+transcribeId+"\n\n");
 
 
             int maxRetry = 10; // 최대 재시도 횟수
@@ -71,7 +71,6 @@ public class PostAndGetTranscribe {
 
                 } else {
                     success = true;
-
                 }
             }
         } catch (Exception e) {

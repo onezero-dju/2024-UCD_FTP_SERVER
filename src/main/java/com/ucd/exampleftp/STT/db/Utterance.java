@@ -1,11 +1,15 @@
 package com.ucd.exampleftp.STT.db;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Data
 @Builder
+@NoArgsConstructor  // 기본 생성자 추가
+@AllArgsConstructor // 모든 필드를 포함한 생성자 추가
 public class Utterance {
 
     @Field("start_at") // MongoDB 필드명과 매핑
