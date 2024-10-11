@@ -43,6 +43,9 @@ secrets.yml
 node_modules
 src/main/resources/*
 
+src/main/resources/application.properties
+
+
 
 HELP.md
 .gradle
