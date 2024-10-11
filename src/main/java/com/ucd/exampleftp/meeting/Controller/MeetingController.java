@@ -12,9 +12,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
-@Slf4j
-@RestController
-@RequestMapping(value = "/api/meetings")
+    @Slf4j
+    @RestController
+    @RequestMapping(value = "/api/meetings")
 public class MeetingController extends GlobalExceptionHandler {
 
 
