@@ -1,5 +1,7 @@
 package com.ucd.exampleftp.meeting.model;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,11 +13,11 @@ import java.util.List;
 @Getter
 @Setter
 @ToString
-
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class MeetingsByChannelDTOList {
 
-    Long Category_id;
-    String Category_name;
+    Long CategoryId;
+    String CategoryName;
     List<MeetingsByChannelDTO> meetingDTOList;
 
 }

@@ -1,19 +1,17 @@
     package com.ucd.exampleftp.meeting.db;
 
-    import com.mongodb.lang.NonNull;
-    import jakarta.validation.constraints.Size;
+    import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+    import com.fasterxml.jackson.databind.annotation.JsonNaming;
     import lombok.*;
     import org.bson.types.ObjectId;
     import org.springframework.data.annotation.Id;
     import org.springframework.data.mongodb.core.mapping.Document;
     import org.springframework.data.mongodb.core.mapping.Field;
     import jakarta.validation.constraints.NotBlank;
-    import jakarta.validation.constraints.NotNull;
 
     import java.sql.Timestamp;
-    import java.time.LocalDate;
+    import java.time.LocalDateTime;
     import java.util.ArrayList;
-    import java.util.Date;
     import java.util.List;
 
 
@@ -24,6 +22,7 @@
     @Setter
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public class Meeting {
 
         @Id
@@ -46,10 +45,10 @@
         private String meetingTitle;
 
         @Field(value = "created_at")
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
 
         @Field(value = "edited_at")
-        private LocalDate editedAt;
+        private LocalDateTime editedAt;
 
         @Builder.Default
         private List<Participant> participants = new ArrayList<>();  // 빈 리스트로 기본값 설정

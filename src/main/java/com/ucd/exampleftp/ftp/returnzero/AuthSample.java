@@ -64,8 +64,6 @@ public class AuthSample {
 
         mongoService.setRZtoken(token);
 
-
-
     }
 
     public String GetAccessToken() throws IOException {

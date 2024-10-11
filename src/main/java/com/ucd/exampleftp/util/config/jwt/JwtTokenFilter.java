@@ -50,6 +50,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
                 // 인증 객체를 SecurityContext에 설정
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
             } else {
                 log.warn("Invalid JWT Token.");
             }

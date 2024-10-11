@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -56,20 +57,30 @@ public class MeetingConverter {
 
     // List<Meeting>을 MeetingsByChannelDTOList로 변환
     public List<MeetingsByChannelDTOList> convertByChannelAndSorting(List<Meeting> meetings) {
-        // 먼저 categoryId를 기준으로 그룹화한 다음 그룹별로 MeetingsByChannelDTOList를 생성
-        Map<Long, List<Meeting>> groupedByCategory = meetings.stream()
-                .collect(Collectors.groupingBy(Meeting::getCategoryId));
+        final Long DEFAULT_CATEGORY_ID = -1L; // 기본 카테고리 ID
+        final String DEFAULT_CATEGORY_NAME = "Uncategorized"; // 기본 카테고리 이름
 
-        // 그룹화된 결과를 MeetingsByChannelDTOList로 변환
+        // categoryId가 null인 경우 기본값으로 대체하여 그룹화
+        Map<Long, List<Meeting>> groupedByCategory = meetings.stream()
+                .collect(Collectors.groupingBy(meeting ->
+                        Optional.ofNullable(meeting.getCategoryId()).orElse(DEFAULT_CATEGORY_ID)
+                ));
+
+        // 그룹화된 데이터를 DTO로 변환
         return groupedByCategory.entrySet().stream()
-                .map(entry -> MeetingsByChannelDTOList.builder()
-                        .Category_id(entry.getKey())
-                        .Category_name(entry.getValue().get(0).getCategoryName())  // 첫 번째 회의의 카테고리 이름 사용
-                        .meetingDTOList(entry.getValue().stream()
-                                .sorted(Comparator.comparing(Meeting::getEditedAt))  // editedAt 기준 정렬
-                                .map(this::meetingToMeetingsByChannelDTO)
-                                .collect(Collectors.toList()))
-                        .build())
+                .map(entry -> {
+                    Long categoryId = entry.getKey();
+                    String categoryName = (categoryId.equals(DEFAULT_CATEGORY_ID)) ? DEFAULT_CATEGORY_NAME : entry.getValue().get(0).getCategoryName();
+
+                    return MeetingsByChannelDTOList.builder()
+                            .CategoryId(categoryId)
+                            .CategoryName(categoryName)
+                            .meetingDTOList(entry.getValue().stream()
+                                    .sorted(Comparator.comparing(Meeting::getEditedAt)) // editedAt 기준 정렬
+                                    .map(this::meetingToMeetingsByChannelDTO)
+                                    .collect(Collectors.toList()))
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 

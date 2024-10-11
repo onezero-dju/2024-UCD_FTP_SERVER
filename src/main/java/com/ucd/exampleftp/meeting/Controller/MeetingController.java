@@ -47,7 +47,7 @@ public class MeetingController extends GlobalExceptionHandler {
     }
 
 
-    @GetMapping(value = "/view/{meeting_id}")
+    @GetMapping(value = "/{meeting_id}/view")
     public MeetingDTO viewMeeting(
             @PathVariable("meeting_id")
             String meeting_id
@@ -68,7 +68,7 @@ public class MeetingController extends GlobalExceptionHandler {
 
     }
 
-    @PostMapping(value = "/{meeting_id}/addAgenda")
+    @PostMapping(value = "/{meeting_id}/add_agenda")
     public boolean addAgenda(
             @PathVariable("meeting_id")
             String meeting_id,
@@ -85,7 +85,7 @@ public class MeetingController extends GlobalExceptionHandler {
 
 
 
-    @GetMapping("/byChannel/{channel_id}")
+    @GetMapping("/by_channel/{channel_id}")
     public List<MeetingsByChannelDTOList> getMeetingsByChannelId(
             @PathVariable(value = "channel_id")
             String channel_id
@@ -97,6 +97,30 @@ public class MeetingController extends GlobalExceptionHandler {
 
 
 
+    @GetMapping("/{meeting_id}/delete")
+    public boolean deleteMeetings(
+            @PathVariable(value = "meeting_id")
+            String meeting_id
+    ){
+
+        try {
+
+            meetingService.deleteMeetings(meeting_id);
+            return true;
+
+        }catch (Exception exceptione){
+            throw new IllegalStateException("delete meeting is not working in controller");
+        }
+
+    }
+
+
+    @GetMapping(value = "/{meeting_id}/add_participant")
+    public boolean addParticipant(){
+
+
+return false;
+    }
 
 
 

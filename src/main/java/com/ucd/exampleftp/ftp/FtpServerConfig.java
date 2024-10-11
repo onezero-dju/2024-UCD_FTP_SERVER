@@ -93,6 +93,9 @@ public class FtpServerConfig {
                 for (File file : files) {
                     if (file.isFile()) {
                         try {
+                            ///첫번째 meeting_id
+                            ///두번째 참여자 수
+                            ///세번째 파일 카운트
                             List<String> fileInfo= saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
                             String response_stt=postAndGetTranscribe
                                     .postAndGetTranscribe(file,token,fileInfo.get(0),fileInfo.get(1),fileInfo.get(2));

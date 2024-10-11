@@ -15,10 +15,15 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +43,13 @@ public class MeetingService {
         this.mongoTemplate = mongoTemplate;
     }
 
+    public String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return authentication.getName(); // username 추출
+        }
+        return null; // 인증되지 않은 경우
+    }
 
     // 미팅 저장
     public MeetingDTO saveMeeting(MeetingCreateRequest meetingCreateRequest) {
@@ -51,8 +63,8 @@ public class MeetingService {
                 .recordings(meetingCreateRequest.getRecordings())
                 .agenda(meetingCreateRequest.getAgenda())
                 .participants(meetingCreateRequest.getParticipants())
-                .createdAt(LocalDate.now())
-                .editedAt(LocalDate.now())
+                .createdAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                .editedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
                 .build();
 
         meetingRepository.save(meeting);  // MongoDB에 저장
@@ -69,9 +81,12 @@ public class MeetingService {
         if (meeting.isPresent()) {
             log.info("meeting id:" + meeting.get());
             Meeting meetingEntity = meeting.get();
+
+            log.info("getCurrentUsername():"+getCurrentUsername());
+
             return meetingConverter.meetingConverterToDTO(meetingEntity);
         } else {
-            return null;
+            throw new IllegalStateException("열람할 미팅이 없습니다.");
         }
     }
 
@@ -102,15 +117,22 @@ public class MeetingService {
 
 
         ObjectId objectId = new ObjectId(meeting_id);
-        Optional<Meeting> meeting = meetingRepository.findById(objectId);
 
-        if (meeting.get().getAgenda().isEmpty()||meeting.get().getAgenda()==null) {
+        try{
+            Optional<Meeting> meeting = meetingRepository.findById(objectId);
+            if (meeting.get().getAgenda().isEmpty()||meeting.get().getAgenda()==null) {
 
-            return false;
+                return false;
 
-        } else {
-            return true;
+            } else {
+                return true;
+            }
+
         }
+        catch (Exception e){
+            return false;
+        }
+
     }
 
 
@@ -138,6 +160,22 @@ public class MeetingService {
         return result.getModifiedCount() > 0;
 
 
+    }
+
+    public boolean deleteMeetings(
+            String meeting_id
+    ){
+
+        try {
+
+            Query query = new Query(Criteria.where("id").is(meeting_id));
+            mongoTemplate.remove(query, Meeting.class);
+
+        }catch (Exception e){
+
+        }
+
+        return false;
     }
 
 

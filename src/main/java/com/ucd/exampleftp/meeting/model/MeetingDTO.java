@@ -1,6 +1,8 @@
 package com.ucd.exampleftp.meeting.model;
 
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.ucd.exampleftp.meeting.db.Participant;
 import lombok.Builder;
 import lombok.Getter;
@@ -8,7 +10,10 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -16,6 +21,7 @@ import java.util.List;
 @Getter
 @Setter
 @ToString
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class MeetingDTO {
 
     // ObjectId를 문자열로 반환하기 위한 필드
@@ -37,10 +43,10 @@ public class MeetingDTO {
     private String meetingTitle;
 
     @Field(value = "created_at")
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
 
     @Field(value = "edited_at")
-    private LocalDate editedAt;
+    private LocalDateTime editedAt;
 
     private List<Participant> participants;
 
