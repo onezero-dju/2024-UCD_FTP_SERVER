@@ -44,7 +44,7 @@ public class MeetingCreateRequest {
 
     @Size(min = 1, message = "참가자는 최소 1명 이상이어야 합니다.")
     private List<Participant> participants;
-
+    @NotNull(message = "안건을 미입력")
     private String agenda;
 
     @Field("recordings")

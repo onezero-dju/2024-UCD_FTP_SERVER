@@ -4,15 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
-
 
 @Component
 @Slf4j
@@ -23,66 +20,89 @@ public class PostTranscribeSample {
 
     public String postAudio(File file, int numOfPeople, String token) throws Exception {
 
-        log.info("auth token :"+token);
+        log.info("auth token: {}", token);
 
+        String boundary = "authsample";
+        String LINE_FEED = "\r\n";
 
         URL url = new URL("https://openapi.vito.ai/v1/transcribe");
         HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+        httpConn.setUseCaches(false);
+        httpConn.setDoOutput(true); // indicates POST method
+        httpConn.setDoInput(true);
         httpConn.setRequestMethod("POST");
-        httpConn.setRequestProperty("accept", "application/json");
-        httpConn.setRequestProperty("Authorization", "Bearer "+ token);
-        httpConn.setRequestProperty("Content-Type", "multipart/form-data;boundary=authsample");
-        httpConn.setDoOutput(true);
+        httpConn.setRequestProperty("Accept", "application/json");
+        httpConn.setRequestProperty("Authorization", "Bearer " + token);
+        httpConn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
 
+        try (DataOutputStream outputStream = new DataOutputStream(httpConn.getOutputStream())) {
 
-        DataOutputStream outputStream;
-        outputStream = new DataOutputStream(httpConn.getOutputStream());
+            // 파일 파트 작성
+            outputStream.writeBytes("--" + boundary + LINE_FEED);
+            String sanitizedFileName = sanitizeFileName(file.getName());
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + sanitizedFileName + "\"" + LINE_FEED);
+            String contentType = URLConnection.guessContentTypeFromName(sanitizedFileName);
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+            outputStream.writeBytes("Content-Type: " + contentType + LINE_FEED);
+            outputStream.writeBytes(LINE_FEED);
 
-        outputStream.writeBytes("--authsample\r\n");
-        outputStream.writeBytes("Content-Disposition: form-data; name=\"file\";filename=\"" + file.getName() +"\"\r\n");
+            // 파일 데이터 스트리밍 (청크 단위)
+            try (FileInputStream inputStream = new FileInputStream(file)) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                outputStream.writeBytes(LINE_FEED);
+            }
 
+            // 다음 파트 시작
+            outputStream.writeBytes("--" + boundary + LINE_FEED);
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"config\"" + LINE_FEED);
+            outputStream.writeBytes("Content-Type: application/json" + LINE_FEED);
+            outputStream.writeBytes(LINE_FEED);
+            outputStream.writeBytes(
+                    "{\n" +
+                            "   \"use_diarization\": true,\n" +
+                            "   \"diarization\": {\"spk_count\": " + numOfPeople + "},\n" +
+                            "   \"use_itn\": false,\n" +
+                            "   \"use_disfluency_filter\": false,\n" +
+                            "   \"use_profanity_filter\": false,\n" +
+                            "   \"use_paragraph_splitter\": true,\n" +
+                            "   \"paragraph_splitter\": {\"max\": 50}\n" +
+                            "}"
+            );
+            outputStream.writeBytes(LINE_FEED);
 
-        outputStream.writeBytes("Content-Type: " + URLConnection.guessContentTypeFromName(file.getName()) + "\r\n");
-        outputStream.writeBytes("Content-Transfer-Encoding: binary" + "\r\n");
-        outputStream.writeBytes("\r\n");
-
-        FileInputStream in =new FileInputStream(file);
-        byte[] buffer = new byte[(int)file.length()];
-        int bytesRead = -1;
-        while ((bytesRead = in.read(buffer)) != -1) {
-            outputStream.write(buffer,0,bytesRead);
-            outputStream.writeBytes("\r\n");
-            outputStream.writeBytes("--authsample\r\n");
+            // 최종 경계 작성
+            outputStream.writeBytes("--" + boundary + "--" + LINE_FEED);
+            outputStream.flush();
+        } catch (IOException e) {
+            log.error("Error while sending POST request", e);
+            throw e;
         }
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--authsample\r\n");
-        outputStream.writeBytes("Content-Disposition: form-data; name=\"config\"\r\n");
-        outputStream.writeBytes("Content-Type: application/json\r\n");
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes(
-                "{\n" +
-                        "   \"use_diarization\": true,\n" +
-                        "   \"diarization\": {\"spk_count\": 2},\n" +
-                        "   \"use_itn\": false,\n" +
-                        "   \"use_disfluency_filter\": false,\n" +
-                        "   \"use_profanity_filter\": false,\n" +
-                        "   \"use_paragraph_splitter\": true,\n" +
-                        "   \"paragraph_splitter\": {\"max\": 50}\n" +
-                        "}"
-        );
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--authsample\r\n");
-        outputStream.flush();
-        outputStream.close();
 
-        InputStream responseStream = httpConn.getResponseCode() / 100 == 2
+        // 응답 처리
+        int responseCode = httpConn.getResponseCode();
+        InputStream responseStream = responseCode / 100 == 2
                 ? httpConn.getInputStream()
                 : httpConn.getErrorStream();
-        Scanner s = new Scanner(responseStream).useDelimiter("\\A");
-        String response = s.hasNext() ? s.next() : "";
-        s.close();
-        System.out.println(response);
+        String response;
+        try (Scanner s = new Scanner(responseStream, StandardCharsets.UTF_8.name())) {
+            s.useDelimiter("\\A");
+            response = s.hasNext() ? s.next() : "";
+        }
 
+        log.info("Response: {}", response);
         return response;
+    }
+
+    /**
+     * 파일 이름을 정제하여 MIME 헤더 오류를 방지합니다.
+     */
+    private String sanitizeFileName(String fileName) {
+        return fileName.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
     }
 }

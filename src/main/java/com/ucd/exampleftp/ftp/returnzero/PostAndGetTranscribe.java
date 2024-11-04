@@ -1,20 +1,21 @@
 package com.ucd.exampleftp.ftp.returnzero;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ucd.exampleftp.STT.db.STTResponse;
 import com.ucd.exampleftp.STT.service.STTResponseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
-
-
-///Returnzero
 
 @Component
 @Slf4j
 public class PostAndGetTranscribe {
+
     @Autowired
     private GetTranscribeSample getTranscribeSample;
 
@@ -24,66 +25,87 @@ public class PostAndGetTranscribe {
     @Autowired
     private STTResponseService sttResponseService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public String postAndGetTranscribe(
             File file, String token, String meetingId, String participants, String count
-    ){
+    ) throws JsonProcessingException {
 
         String transcribeIdResponse;
         String response = "";
 
-        String fileName=file.getName();
-        log.info("postAndGetTranscribe에 들어온 파일 이름"+fileName);
+        String fileName = file.getName();
+        log.info("postAndGetTranscribe에 들어온 파일 이름: {}", fileName);
 
         try {
-            //json
-            ObjectMapper objectMapper = new ObjectMapper();
-
-            //ReturnZero에 파일 전송
-            transcribeIdResponse = postTranscribeSample.postAudio(file, 2,token);
-
-            log.info("transcribeIdResponse:"+transcribeIdResponse);
+            // 서버에 파일 전송
+            transcribeIdResponse = postTranscribeSample.postAudio(file, 2, token);
+            log.info("transcribeIdResponse: {}", transcribeIdResponse);
 
             JsonNode rootNode = objectMapper.readTree(transcribeIdResponse);
-            JsonNode idNode= rootNode.path("id");
-
-
-
-            String transcribeId= idNode.asText();
-
-            log.info("transcribeId:"+transcribeId+"\n\n");
-
+            JsonNode idNode = rootNode.path("id");
+            String transcribeId = idNode.asText();
+            log.info("transcribeId: {}\n\n", transcribeId);
 
             int maxRetry = 10; // 최대 재시도 횟수
-            int retryCount=0;
+            int retryCount = 0;
             boolean success = false;
 
-            while(retryCount<maxRetry &&!success) {
-
+            while (retryCount < maxRetry && !success) {
                 response = getTranscribeSample.getTranscribe(transcribeId, token);
 
-
-                if (response.contains("not found")||response.contains("\"status\":\"transcribing\"")) {
-                    log.info("STT get Transcribe response:"+ response);
-
+                if (response.contains("not found") || response.contains("\"status\":\"transcribing\"")) {
+                    log.info("STT get Transcribe response: {}", response);
                     retryCount++;
-                    Thread.sleep(1000);  // 2초 대기 후 재시도
-
+                    Thread.sleep(1000);  // 1초 대기 후 재시도
                 } else {
                     success = true;
                 }
             }
+
+            // 응답이 유효하다면 수행.
+            if (isValidJson(response)) {
+                STTResponse sttResponse = objectMapper.readValue(response, STTResponse.class);
+                Mono<String> responseMono = sttResponseService.sendTestQuestionToLLMAsync();
+
+                responseMono.subscribe(response1 -> {
+                    // 응답 처리 로직
+                    log.info("Received response from LLM API: {}", response1);
+                }, error -> {
+                    // 에러 처리 로직
+                    log.error("Error occurred while sending request to LLM API", error);
+                });
+
+
+
+//                sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
+//                sttResponseService.sendTestQuestionToLLM();
+
+
+            } else {
+                log.error("Unexpected response format: {}", response);
+                throw new IllegalStateException("Invalid response format: " + response);
+            }
+
+        } catch (JsonProcessingException e) {
+            log.error("JSON processing error in postAndGetTranscribe", e);
+            throw e;
         } catch (Exception e) {
+            log.error("Error in postAndGetTranscribe", e);
             throw new RuntimeException(e);
         }
 
-        sttResponseService.saveSTTResponse(response, meetingId, Integer.parseInt(count));
-
         return response;
-
-
-
     }
 
 
+    private boolean isValidJson(String response) {
+        try {
+            objectMapper.readTree(response);
+            return true;
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+    }
 }
