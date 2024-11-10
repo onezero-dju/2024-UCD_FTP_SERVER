@@ -79,7 +79,7 @@ public class PostAndGetTranscribe {
 
 
 
-//                sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
+                sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
 //                sttResponseService.sendTestQuestionToLLM();
 
 
