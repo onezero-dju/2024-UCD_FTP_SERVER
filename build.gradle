@@ -43,6 +43,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Spring Boot Starter for AMQP (RabbitMQ)
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    // JSON 직렬화를 위한 라이브러리 (선택사항)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
 }
 
 

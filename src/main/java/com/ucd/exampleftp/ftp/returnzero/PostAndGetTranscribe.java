@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ucd.exampleftp.STT.db.STTResponse;
 import com.ucd.exampleftp.STT.service.STTResponseService;
+import com.ucd.exampleftp.meeting.service.MeetingService;
+import com.ucd.exampleftp.meeting.service.MeetingSseService;
+import com.ucd.exampleftp.util.config.rabbitMQ.RabbitMQSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,6 +24,14 @@ public class PostAndGetTranscribe {
 
     @Autowired
     private PostTranscribeSample postTranscribeSample;
+
+    @Autowired
+    private MeetingSseService meetingSseService;
+
+    @Autowired
+    private MeetingService meetingService;
+
+
 
     @Autowired
     private STTResponseService sttResponseService;
@@ -80,7 +91,16 @@ public class PostAndGetTranscribe {
 
 
                 sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
-//                sttResponseService.sendTestQuestionToLLM();
+
+                //여기에서 RabbitMQ 활용해 sse controller단에 토픽을 보내기(나중에)
+                //log.info(sttResponseService.sendTestQuestionToLLMAsync().toString());
+
+                log.info("아젠다 출력"+meetingService.getAgenda(meetingId).toString());
+
+
+                //RabbitMQ를 통해 STTResponse 전송
+                meetingSseService.sendSTTResponse(meetingId, sttResponse);
+
 
 
             } else {

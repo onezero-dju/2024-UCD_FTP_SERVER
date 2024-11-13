@@ -8,6 +8,7 @@ import com.ucd.exampleftp.meeting.db.Participant;
 import com.ucd.exampleftp.meeting.model.*;
 import com.ucd.exampleftp.util.config.jwt.CustomUserDetails;
 import com.ucd.exampleftp.util.config.jwt.CustomUserDetailsController;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -25,10 +26,9 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -187,6 +187,12 @@ public class MeetingService {
     }
 
 
+
+
+
+
+
+
     public boolean deleteMeetings(
             String meeting_id
     ){
@@ -226,6 +232,29 @@ public class MeetingService {
         return result.getModifiedCount() > 0;
     }
 
+
+
+    public AgendaListDTO getAgenda(String meetingId) {
+        ObjectId objectId= new ObjectId(meetingId);
+        Meeting meeting = meetingRepository.findById(objectId)
+                .orElseThrow(() -> new EntityNotFoundException("Meeting not found with id: " + meetingId));
+
+        String agendaStr = meeting.getAgenda();
+        Map<String, String> agendaMap = new HashMap<>();
+
+        if (agendaStr != null && !agendaStr.trim().isEmpty()) {
+            AtomicInteger counter = new AtomicInteger(1);
+            Arrays.stream(agendaStr.split("@"))
+                    .map(String::trim)
+                    .filter(content -> !content.isEmpty())
+                    .forEach(content ->
+                            agendaMap.put(String.valueOf(counter.getAndIncrement()), content));
+        }
+
+        return AgendaListDTO.builder()
+                .agendas(agendaMap)
+                .build();
+    }
 
 
 }
