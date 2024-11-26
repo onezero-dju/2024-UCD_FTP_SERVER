@@ -6,9 +6,7 @@ import com.ucd.exampleftp.meeting.db.Meeting;
 import com.ucd.exampleftp.meeting.db.MeetingRepository;
 import com.ucd.exampleftp.meeting.db.Participant;
 import com.ucd.exampleftp.meeting.model.*;
-import com.ucd.exampleftp.util.config.jwt.CustomUserDetails;
 import com.ucd.exampleftp.util.config.jwt.CustomUserDetailsController;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -16,19 +14,14 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 
 
-import javax.swing.*;
-import java.sql.Timestamp;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -234,10 +227,10 @@ public class MeetingService {
 
 
 
-    public AgendaListDTO getAgenda(String meetingId) {
+    public Map<String, String> getAgenda(String meetingId) {
         ObjectId objectId= new ObjectId(meetingId);
         Meeting meeting = meetingRepository.findById(objectId)
-                .orElseThrow(() -> new EntityNotFoundException("Meeting not found with id: " + meetingId));
+                .orElseThrow(() -> new NoSuchElementException("Meeting not found with id: " + meetingId));
 
         String agendaStr = meeting.getAgenda();
         Map<String, String> agendaMap = new HashMap<>();
@@ -251,9 +244,7 @@ public class MeetingService {
                             agendaMap.put(String.valueOf(counter.getAndIncrement()), content));
         }
 
-        return AgendaListDTO.builder()
-                .agendas(agendaMap)
-                .build();
+        return agendaMap;
     }
 
 

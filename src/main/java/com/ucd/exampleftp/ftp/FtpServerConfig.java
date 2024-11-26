@@ -2,7 +2,7 @@ package com.ucd.exampleftp.ftp;
 
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 import com.ucd.exampleftp.ftp.MongoService.MongoService;
-import com.ucd.exampleftp.ftp.returnzero.PostAndGetTranscribe;
+import com.ucd.exampleftp.ftp.returnzero.PostAndGetTranscript;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
@@ -32,7 +32,7 @@ public class FtpServerConfig {
     private int ftpPort; // FTP 서버 포트를 가져옴
 
     @Autowired
-    PostAndGetTranscribe postAndGetTranscribe;
+    PostAndGetTranscript postAndGetTranscript;
 
     private final MongoService mongoService;
 
@@ -97,7 +97,7 @@ public class FtpServerConfig {
                             ///두번째 참여자 수
                             ///세번째 파일 카운트
                             List<String> fileInfo= saveFileToGridFS(file, gridFsTemplate); // 파일을 GridFS에 저장
-                            String response_stt=postAndGetTranscribe
+                            String response_stt= postAndGetTranscript
                                     .postAndGetTranscribe(file,token,fileInfo.get(0),fileInfo.get(1),fileInfo.get(2));
 
                             log.info("\n\n"+"response is here:"+response_stt+"\n\n");

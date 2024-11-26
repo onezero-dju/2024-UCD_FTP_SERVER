@@ -1,9 +1,14 @@
 package com.ucd.exampleftp.meeting.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ucd.exampleftp.meeting.db.Meeting;
+import com.ucd.exampleftp.meeting.model.LlmResponse;
 import com.ucd.exampleftp.meeting.model.MeetingDTO;
 import com.ucd.exampleftp.meeting.model.MeetingsByChannelDTO;
 import com.ucd.exampleftp.meeting.model.MeetingsByChannelDTOList;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +20,7 @@ import java.util.stream.Collectors;
 
 
 @Component
+@Slf4j
 public class MeetingConverter {
 
     public MeetingDTO meetingConverterToDTO(Meeting meeting){
@@ -82,6 +88,24 @@ public class MeetingConverter {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+
+    //*
+    // NLP에서 반환된 String형의 응답을 컨버팅
+    //
+    // *//
+
+    public LlmResponse convertStringToLlmResponse(String responseJson) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            return objectMapper.readValue(responseJson, LlmResponse.class);
+
+        } catch (JsonProcessingException e) {
+            log.error("JSON 역직렬화 오류", e);
+            throw new RuntimeException("LLM 응답 변환 중 오류 발생", e);
+        }
     }
 
 

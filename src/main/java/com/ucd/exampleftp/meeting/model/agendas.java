@@ -13,7 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 @ToString
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)  // JSON 필드와 일치시키기 위해 추가
-public class AgendaListDTO {
+public class agendas {
 
 
     private Map<String, String> agendas;

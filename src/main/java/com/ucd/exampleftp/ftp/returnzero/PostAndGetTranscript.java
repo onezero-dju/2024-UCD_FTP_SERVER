@@ -4,20 +4,25 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ucd.exampleftp.STT.db.STTResponse;
+import com.ucd.exampleftp.STT.db.Utterance;
 import com.ucd.exampleftp.STT.service.STTResponseService;
+import com.ucd.exampleftp.ftp.MongoService.MongoService;
+import com.ucd.exampleftp.meeting.model.LlmResponse;
+import com.ucd.exampleftp.meeting.model.SummaryRequest;
+import com.ucd.exampleftp.meeting.service.MeetingConverter;
 import com.ucd.exampleftp.meeting.service.MeetingService;
 import com.ucd.exampleftp.meeting.service.MeetingSseService;
-import com.ucd.exampleftp.util.config.rabbitMQ.RabbitMQSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
+import java.util.List;
 
 @Component
 @Slf4j
-public class PostAndGetTranscribe {
+public class PostAndGetTranscript {
 
     @Autowired
     private GetTranscribeSample getTranscribeSample;
@@ -31,13 +36,18 @@ public class PostAndGetTranscribe {
     @Autowired
     private MeetingService meetingService;
 
-
+    @Autowired
+    private MongoService mongoService;
 
     @Autowired
     private STTResponseService sttResponseService;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private MeetingConverter meetingConverter;
+
 
     public String postAndGetTranscribe(
             File file, String token, String meetingId, String participants, String count
@@ -78,11 +88,43 @@ public class PostAndGetTranscribe {
             // 응답이 유효하다면 수행.
             if (isValidJson(response)) {
                 STTResponse sttResponse = objectMapper.readValue(response, STTResponse.class);
-                Mono<String> responseMono = sttResponseService.sendTestQuestionToLLMAsync();
 
-                responseMono.subscribe(response1 -> {
+
+                StringBuilder allMessagesBuilder = new StringBuilder();
+
+                List<Utterance> utterances = sttResponse.getResults().getUtterances();
+                for (Utterance utterance : utterances) {
+                    allMessagesBuilder.append(utterance.getMsg()).append(" ");
+                }
+                sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
+
+
+                String summary=allMessagesBuilder.toString().trim();
+
+
+                // ObjectMapper 인스턴스가 없다면 생성 또는 주입
+                ObjectMapper objectMapper = new ObjectMapper();
+
+                SummaryRequest summaryRequest = new SummaryRequest();
+                summaryRequest.setAgendas(meetingService.getAgenda(meetingId));
+                summaryRequest.setTranscript(summary);
+
+
+
+
+
+
+                Mono<LlmResponse> llmResponseMono = sttResponseService.sendTextToLLMAsync(summaryRequest)
+                        .map(this.meetingConverter::convertStringToLlmResponse);
+
+
+
+
+                llmResponseMono.subscribe(response1 -> {
                     // 응답 처리 로직
                     log.info("Received response from LLM API: {}", response1);
+                    meetingSseService.streamLLMResponse(meetingId, response1);
+                    mongoService.saveLlmResponse(meetingId, response1);
                 }, error -> {
                     // 에러 처리 로직
                     log.error("Error occurred while sending request to LLM API", error);
@@ -90,16 +132,8 @@ public class PostAndGetTranscribe {
 
 
 
-                sttResponseService.saveSTTResponse(sttResponse, meetingId, Integer.parseInt(count));
-
-                //여기에서 RabbitMQ 활용해 sse controller단에 토픽을 보내기(나중에)
-                //log.info(sttResponseService.sendTestQuestionToLLMAsync().toString());
-
-                log.info("아젠다 출력"+meetingService.getAgenda(meetingId).toString());
 
 
-                //RabbitMQ를 통해 STTResponse 전송
-                meetingSseService.sendSTTResponse(meetingId, sttResponse);
 
 
 
